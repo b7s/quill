@@ -186,19 +186,19 @@ Panel {
     root._loadedLocale = loc
     root.dictLoading = true
     var url = "https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/" + loc + "/index.dic"
-    var script = "D=$HOME/.local/share/quill/dict; L=" + loc + "; F=$D/$L.words; mkdir -p $D; " +
-      "if [ ! -f $F ]; then T=$(mktemp); " +
-      "if curl -fsSL '" + url + "' -o $T; then " +
-      "tail -n +2 $T | iconv -f UTF-8 -t ASCII//TRANSLIT | " +
-      "awk '{split($0,a,\"/\"); w=tolower(a[1]); gsub(/[^a-z]/,\"\",w); if(length(w)>=2 && length(w)<=20) print w}' | sort -u > $F; fi; " +
-      "rm -f $T; fi; echo ok"
+    var script = "D=$(echo ~)/.local/share/quill/dict; L=" + loc + "; F=$D/$L.words; mkdir -p \"$D\"; " +
+      "if [ ! -f \"$F\" ]; then T=$(mktemp); " +
+      "if curl -fsSL '" + url + "' -o \"$T\"; then " +
+      "tail -n +2 \"$T\" | iconv -f UTF-8 -t ASCII//TRANSLIT | " +
+      "awk '{split($0,a,\"/\"); w=tolower(a[1]); gsub(/[^a-z]/,\"\",w); if(length(w)>=2 && length(w)<=20) print w}' | sort -u > \"$F\"; fi; " +
+      "rm -f \"$T\"; fi; echo ok"
     dictSetup.command = ["sh", "-c", script]
     dictSetup.running = true
   }
 
   function loadDictFile() {
     var loc = root._loadedLocale
-    dictLoad.command = ["sh", "-c", "cat \"$HOME/.local/share/quill/dict/" + loc + ".words\""]
+    dictLoad.command = ["sh", "-c", "cat \"$(echo ~)/.local/share/quill/dict/" + loc + ".words\""]
     dictLoad.running = true
   }
 
@@ -576,8 +576,10 @@ Panel {
         id: suggestionDelegate
         Rectangle {
           height: root.gripH - 6
+          Layout.preferredHeight: root.gripH - 6
           radius: 4
           width: lbl.implicitWidth + 12
+          Layout.preferredWidth: lbl.implicitWidth + 12
           color: sugMA.containsMouse ? Qt.alpha(Color.foreground, 0.20) : Qt.alpha(Color.foreground, 0.12)
           border.color: root.keyBorder
           border.width: 1
@@ -641,10 +643,12 @@ Panel {
             }
           }
 
-          Row {
+          RowLayout {
             id: sugRow
             spacing: 6
             visible: root.suggestions.length > 0
+            Layout.fillWidth: false
+            Layout.alignment: Qt.AlignVCenter
             Repeater {
               model: root.suggestions
               delegate: suggestionDelegate
