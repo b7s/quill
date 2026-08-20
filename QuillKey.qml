@@ -23,13 +23,10 @@ Item {
   property string keyFont: "monospace"
   property int keyFontSize: 14
   signal pressed(var key)
+  signal released(var key)
 
   // Inner width of the whole keyboard; the Space key stretches to fill it.
   property int boardWidth: 0
-
-  // Set by the parent so the key can also act as a drag handle: a click types,
-  // but a press-and-move drags the whole keyboard.
-  property var dragTarget: null
 
   readonly property real span: (key && key.w) ? key.w : 1
 
@@ -61,15 +58,7 @@ Item {
     id: mouse
     anchors.fill: parent
     hoverEnabled: true
-    drag.target: root.dragTarget
-    drag.axis: Drag.XAndYAxis
-    drag.threshold: 6
-    onClicked: root.pressed(root.key)
-    onPressed: {
-      if (root.dragTarget) {
-        root.dragTarget.lastX = root.dragTarget.x
-        root.dragTarget.lastY = root.dragTarget.y
-      }
-    }
+    onPressed: root.pressed(root.key)
+    onReleased: root.released(root.key)
   }
 }

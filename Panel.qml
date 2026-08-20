@@ -32,32 +32,59 @@ Panel {
     injector.write((down ? "d " : "u ") + code + "\n")
   }
 
-  function pressKey(key) {
-    if (!key) return
-    if (key.type === "shift") { root.shiftOn = !root.shiftOn; return }
-    if (key.type === "ctrl") { root.ctrlOn = !root.ctrlOn; return }
-    if (key.type === "alt") { root.altOn = !root.altOn; return }
-    if (!injector.running) { root.injectError = true; return }
-    var code = key.c
-    if (code === undefined) {
-      var map = { "back": 14, "enter": 28, "tab": 15, "space": 57 }
-      code = map[key.type]
-    }
-    if (code === undefined) return
-    root.sendWithMods(code)
+  function keyCode(k) {
+    if (k.c !== undefined) return k.c
+    var map = { "back": 14, "enter": 28, "tab": 15, "space": 57 }
+    return map[k.type]
   }
 
-  // Send a keycode wrapped in the currently-held sticky modifiers (Ctrl, Alt,
-  // Shift), pressed first and released last, exactly like a real chord.
-  function sendWithMods(code) {
+  function isModifier(k) {
+    return k.type === "shift" || k.type === "ctrl" || k.type === "alt"
+  }
+
+  // Send a key down (with the held sticky modifiers) and keep it held — used for
+  // both the initial press and each auto-repeat tick. The matching up is sent on
+  // release via sendRelease().
+  function sendHold(code) {
     if (root.ctrlOn) root.sendRaw(29, true)
     if (root.altOn) root.sendRaw(56, true)
     if (root.shiftOn) root.sendRaw(42, true)
     root.sendRaw(code, true)
+  }
+
+  function sendRelease(code) {
     root.sendRaw(code, false)
     if (root.shiftOn) root.sendRaw(42, false)
     if (root.altOn) root.sendRaw(56, false)
     if (root.ctrlOn) root.sendRaw(29, false)
+  }
+
+  // Press: modifiers toggle immediately; other keys go down and begin auto-repeat
+  // (after a short delay, like a physical keyboard) so holding deletes/types/etc.
+  function keyDown(k) {
+    if (!k) return
+    if (isModifier(k)) {
+      if (k.type === "shift") root.shiftOn = !root.shiftOn
+      else if (k.type === "ctrl") root.ctrlOn = !root.ctrlOn
+      else if (k.type === "alt") root.altOn = !root.altOn
+      return
+    }
+    if (!injector.running) { root.injectError = true; return }
+    var code = keyCode(k)
+    if (code === undefined) return
+    root._repeatCode = code
+    root.sendHold(code)
+    repeatDelay.restart()
+  }
+
+  // Release: stop auto-repeat and lift the key (and any held modifiers).
+  function keyReleased(k) {
+    if (!k || isModifier(k)) return
+    if (root._repeatCode === null) return
+    repeatDelay.stop()
+    repeatTimer.stop()
+    root.sendRelease(root._repeatCode)
+    root._repeatCode = null
   }
 
   // Native visual tokens (qs.Commons Color/Style), passed into the
@@ -241,6 +268,28 @@ Panel {
 
   property var rows: layouts[activeLayout] || layouts["us"]
 
+  // Key auto-repeat: hold a key to repeat it like a real keyboard.
+  property var _repeatCode: null
+
+  Timer {
+    id: repeatDelay
+    interval: 400
+    repeat: false
+    onTriggered: {
+      if (root._repeatCode === null) return
+      repeatTimer.interval = 45
+      repeatTimer.restart()
+    }
+  }
+  Timer {
+    id: repeatTimer
+    interval: 45
+    repeat: true
+    onTriggered: {
+      if (root._repeatCode !== null) root.sendHold(root._repeatCode)
+    }
+  }
+
   Process {
     id: injector
     running: false
@@ -312,29 +361,14 @@ Panel {
       onCloseRequested: root.close()
       onTabRequested: function(direction) { root.switchPanel(direction) }
 
-      // Full-surface drag layer (behind the keys) so the keyboard can be moved
-      // by click-and-hold-drag anywhere, including gaps and padding.
-      MouseArea {
-        id: dragLayer
-        anchors.fill: parent
-        drag.target: panel.dragHandle
-        drag.axis: Drag.XAndYAxis
-        drag.threshold: 6
-        onPressed: {
-          panel.dragHandle.lastX = panel.dragHandle.x
-          panel.dragHandle.lastY = panel.dragHandle.y
-        }
-      }
-
       Column {
         id: content
         width: parent.width
         spacing: root.keyGap
         anchors.centerIn: parent
 
-        // Header: drag icon (top-left) + close button (top-right). The drag
-        // icon drives the panel's stable dragHandle proxy, so the whole gesture
-        // is captured and the keyboard follows the cursor smoothly.
+        // Header: the whole top bar (except the close button) is the drag handle;
+        // keys themselves no longer drag the keyboard.
         Row {
           id: header
           width: parent.width
@@ -343,7 +377,7 @@ Panel {
 
           Item {
             id: grip
-            width: root.gripH
+            width: parent.width - closeBtn.width - root.keyGap
             height: root.gripH
 
             Text {
@@ -365,12 +399,6 @@ Panel {
                 panel.dragHandle.lastY = panel.dragHandle.y
               }
             }
-          }
-
-          Item {
-            id: spacer
-            width: parent.width - grip.width - closeBtn.width - root.keyGap * 2
-            height: 1
           }
 
           Rectangle {
@@ -412,7 +440,6 @@ Panel {
                   surfaceHover: root.keySurfaceHover
                   surfacePressed: root.keySurfacePressed
                   surfaceError: root.keySurfaceError
-                  dragTarget: panel.dragHandle
                   borderColor: root.keyBorder
                   contentColor: root.keyContent
                   contentColorDim: root.keyContentDim
@@ -423,7 +450,8 @@ Panel {
                   Layout.preferredHeight: root.keyH
                   Layout.fillWidth: key.type !== "char"
                   Layout.fillHeight: false
-                  onPressed: root.pressKey(modelData)
+                  onPressed: root.keyDown(modelData)
+                  onReleased: root.keyReleased(modelData)
                 }
               }
             }
