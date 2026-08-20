@@ -381,7 +381,8 @@ Panel {
             height: root.gripH
 
             Text {
-              anchors.centerIn: parent
+              anchors.left: parent.left
+              anchors.verticalCenter: parent.verticalCenter
               text: "⠿"
               color: Qt.alpha(Color.popups.text, 0.55)
               font.family: Style.font.family
