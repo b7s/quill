@@ -85,10 +85,11 @@ Panel {
   readonly property int kbNaturalWidth: {
     var m = 0
     for (var r = 0; r < root.rows.length; r++) m = Math.max(m, root.kbRowWidth(root.rows[r]))
-    return m
+    return m + root.pad * 2
   }
   readonly property int kbNaturalHeight: root.gripH + root.keyGap
     + root.rows.length * root.keyH + (root.rows.length - 1) * root.keyGap
+    + root.pad * 2
 
   property var rows: [
     [
@@ -304,7 +305,7 @@ Panel {
                 surfaceHover: root.keySurfaceHover
                 surfacePressed: root.keySurfacePressed
                 surfaceError: root.keySurfaceError
-                boardWidth: root.kbNaturalWidth
+                boardWidth: root.kbNaturalWidth - root.pad * 2
                 dragTarget: panel.dragHandle
                 borderColor: root.keyBorder
                 contentColor: root.keyContent
