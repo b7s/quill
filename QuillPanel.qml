@@ -64,44 +64,129 @@ PanelWindow {
 
   // --- screen + lifetime ---------------------------------------------------
 
-  // Detected active (focused) monitor, used as the fallback screen when the
-  // panel is not anchored to a bar. Keeps the keyboard on the screen the user is
-  // actually working on instead of always the first one.
+  // --- screen + position persistence --------------------------------------
+  // The keyboard remembers the last screen and drag position (saved to disk) so
+  // it reopens exactly where it was instead of jumping to a default that can end
+  // up off-screen / clipped. When no saved position exists, it falls back to the
+  // focused monitor (auto-detected via hyprctl).
+
+  // Focused (auto-detected) screen — used as the fallback.
   property string _activeScreenName: ""
   property var _activeScreen: null
 
+  // Persisted position.
+  readonly property string _posPath: "~/.config/omarchy/plugins/io.github.b7s.quill/quill.pos"
+  property string _posScreenName: ""
+  property bool _hasSavedPos: false
+  property var _savedScreen: null
+  property bool _userMoved: false
+  property var _currentScreen: null
+
   function resolveScreen() {
-    if (root._activeScreenName) {
-      for (var i = 0; i < Quickshell.screens.length; i++) {
-        if (Quickshell.screens[i].name === root._activeScreenName) {
-          root._activeScreen = Quickshell.screens[i]
-          return
-        }
-      }
+    root._activeScreen = root._nameToScreen(root._activeScreenName)
+  }
+  function resolveSavedScreen() {
+    root._savedScreen = root._nameToScreen(root._posScreenName)
+    if (root._posScreenName && !root._savedScreen) root._hasSavedPos = false
+  }
+  function _nameToScreen(name) {
+    if (!name) return null
+    for (var i = 0; i < Quickshell.screens.length; i++) {
+      if (Quickshell.screens[i].name === name) return Quickshell.screens[i]
     }
-    root._activeScreen = null
+    return null
+  }
+
+  function repositionToScreen(s) {
+    if (!s) return
+    var w = root.contentWidth, h = root.contentHeight
+    root.dragOffset = Qt.point(
+      Math.round(s.width / 2 - w / 2),
+      Math.round(s.height - h - Style.space(24))
+    )
+  }
+
+  function savePos() {
+    if (!root._posScreenName) return
+    posWrite.running = true
+  }
+
+  function _markMoved() {
+    root._userMoved = true
+    root._hasSavedPos = true
+    if (root.screen) {
+      root._posScreenName = root.screen.name
+      root._savedScreen = root.screen
+      root._currentScreen = root.screen
+    }
+    posSaveTimer.restart()
+  }
+
+  // Which screen the keyboard should open on: saved one if valid, else focused.
+  function targetScreen() {
+    if (root._hasSavedPos && root._savedScreen) return root._savedScreen
+    return root._activeScreen || (Quickshell.screens.length ? Quickshell.screens[0] : null)
   }
 
   screen: anchorWindow ? anchorWindow.screen
-    : (root._activeScreen || (Quickshell.screens.length ? Quickshell.screens[0] : null))
+    : (root._currentScreen || root.targetScreen())
 
-  // Auto-detect the focused monitor (where the user is working) via hyprctl and
-  // remember its name; resolveScreen() maps it to a Quickshell screen above.
   on_ActiveScreenNameChanged: root.resolveScreen()
-  Component.onCompleted: screenProbe.running = true
+  on_PosScreenNameChanged: root.resolveSavedScreen()
+  Component.onCompleted: { posRead.running = true; screenProbe.running = true }
 
+  // Load saved position.
+  Process {
+    id: posRead
+    running: false
+    command: ["sh", "-c", "cat ~/.config/omarchy/plugins/io.github.b7s.quill/quill.pos 2>/dev/null || true"]
+    stdout: StdioCollector { onDataChanged: posRead._raw = text }
+    property string _raw: ""
+    onExited: function(code) {
+      var p = (posRead._raw || "").trim().split("|")
+      if (p.length === 3 && p[0]) {
+        root._posScreenName = p[0]
+        root.dragOffset = Qt.point(Number(p[1]) || 0, Number(p[2]) || 0)
+        root._hasSavedPos = true
+      }
+    }
+  }
+
+  // Persist position (debounced writes handled by posSaveTimer).
+  Process {
+    id: posWrite
+    running: false
+    command: ["sh", "-c", "printf '%s' '" + root._posScreenName + "|" + Math.round(root.dragOffset.x) + "|" + Math.round(root.dragOffset.y) + "' > ~/.config/omarchy/plugins/io.github.b7s.quill/quill.pos"]
+  }
+  Timer {
+    id: posSaveTimer
+    interval: 300
+    onTriggered: root.savePos()
+  }
+
+  // Detect which monitor to open on: prefer the one under the mouse cursor (most
+  // reliable — opening the keyboard can otherwise steal focus to the bar's screen),
+  // then fall back to the focused monitor, then screens[0].
   Process {
     id: screenProbe
     running: false
-    command: ["sh", "-c", "hyprctl -j monitors 2>/dev/null || echo '[]'"]
+    command: ["sh", "-c", "echo MON; hyprctl -j monitors 2>/dev/null || echo '[]'; echo POS; hyprctl -j cursorpos 2>/dev/null || echo '{}'"]
     stdout: StdioCollector { onDataChanged: screenProbe._raw = text }
     property string _raw: ""
     onExited: function(code) {
       try {
-        var arr = JSON.parse(screenProbe._raw)
-        for (var i = 0; i < arr.length; i++) {
-          if (arr[i].focused) { root._activeScreenName = arr[i].name; return }
+        var raw = screenProbe._raw
+        var mi = raw.indexOf("POS")
+        var monStr = raw.substring(0, mi >= 0 ? mi : raw.length).replace(/MON/g, "").trim()
+        var posStr = mi >= 0 ? raw.substring(mi + 3).trim() : "{}"
+        var monitors = JSON.parse(monStr), pos = JSON.parse(posStr)
+        var found = null
+        for (var i = 0; i < monitors.length; i++) {
+          var m = monitors[i]
+          if (pos.x >= m.x && pos.x < m.x + m.width && pos.y >= m.y && pos.y < m.y + m.height) found = m
         }
+        if (!found) for (var j = 0; j < monitors.length; j++) if (monitors[j].focused) found = monitors[j]
+        if (found) root._activeScreenName = found.name
       } catch (e) {}
     }
   }
@@ -213,11 +298,26 @@ PanelWindow {
     if (open) {
       focusPrimed = false
       screenProbe.running = true
+      // Position after the focused-monitor probe resolves so we use the correct
+      // screen and never apply a stale offset (that previously pushed the
+      // keyboard off-screen / clipped it).
+      Qt.callLater(function() {
+        var s = root.targetScreen()
+        root._currentScreen = s
+        if (root._hasSavedPos && root._savedScreen) {
+          root._posScreenName = root._savedScreen.name
+        } else {
+          root._posScreenName = s ? s.name : ""
+          root.repositionToScreen(s)
+        }
+        root.savePos()
+      })
       beginFocusPrime()
       if (focusTarget) Qt.callLater(function() {
         if (root.open && root.focusTarget) root.focusTarget.forceActiveFocus()
       })
     } else {
+      root.savePos()
       focusPrimeTimer.stop()
       focusPrimed = false
     }
@@ -351,10 +451,12 @@ PanelWindow {
     onXChanged: {
       root.dragOffset = Qt.point(root.dragOffset.x + (x - lastX), root.dragOffset.y)
       lastX = x
+      root._markMoved()
     }
     onYChanged: {
       root.dragOffset = Qt.point(root.dragOffset.x, root.dragOffset.y + (y - lastY))
       lastY = y
+      root._markMoved()
     }
   }
   property alias dragHandle: dragProxy

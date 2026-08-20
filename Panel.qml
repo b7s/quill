@@ -345,16 +345,6 @@ Panel {
     contentWidth: panel.fittedContentWidth(root.kbNaturalWidth)
     contentHeight: panel.fittedContentHeight(root.kbNaturalHeight)
 
-    Component.onCompleted: {
-      if (!root.bar && panel.screen) {
-        var w = panel.contentWidth, h = panel.contentHeight
-        panel.dragOffset = Qt.point(
-          Math.round(panel.screen.width / 2 - w / 2),
-          Math.round(panel.screen.height - h - Style.space(24))
-        )
-      }
-    }
-
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
