@@ -97,15 +97,6 @@ PanelWindow {
     return null
   }
 
-  function repositionToScreen(s) {
-    if (!s) return
-    var w = root.contentWidth, h = root.contentHeight
-    root.dragOffset = Qt.point(
-      Math.round(s.width / 2 - w / 2),
-      Math.round(s.height - h - Style.space(24))
-    )
-  }
-
   function savePos() {
     if (!root._posScreenName) return
     posWrite.running = true
@@ -307,8 +298,11 @@ PanelWindow {
         if (root._hasSavedPos && root._savedScreen) {
           root._posScreenName = root._savedScreen.name
         } else {
+          // No saved position: sit at the computed card origin (centered on the
+          // chosen screen). dragOffset is a relative adjustment to that origin, so
+          // leave it at (0,0) rather than writing absolute screen coords.
           root._posScreenName = s ? s.name : ""
-          root.repositionToScreen(s)
+          root.dragOffset = Qt.point(0, 0)
         }
         root.savePos()
       })

@@ -487,6 +487,7 @@ Panel {
 
             Column {
               id: mainBlock
+              width: root.kbBlockWidth(root.rows)
               spacing: root.keyGap
               Repeater {
                 model: root.rows
@@ -500,6 +501,7 @@ Panel {
 
             Column {
               id: navBlock
+              width: root.kbBlockWidth(root.navRows)
               spacing: root.keyGap
               Repeater {
                 model: root.navRows
