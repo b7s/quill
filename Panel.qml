@@ -18,6 +18,20 @@ Panel {
   property bool injectError: false
   property bool wantInjector: true
 
+  // --- word suggestions ----------------------------------------------------
+  // Dictionary is the open-source Hunspell word list shipped by Firefox /
+  // Chromium (via wooorm/dictionaries). It is downloaded + preprocessed into a
+  // plain lowercase word list on first use (per language) and kept in memory
+  // for prefix lookups.
+  property string _loadedLocale: ""
+  property bool dictReady: false
+  property bool dictLoading: false
+  property string suggestionError: ""
+  property var dictWords: []
+  property string typedWord: ""
+  property bool wordStartShift: false
+  property var suggestions: []
+
   function open() { root.controller.show() }
   function close() { root.controller.hide() }
   function toggle() { root.opened ? root.close() : root.open() }
@@ -72,7 +86,27 @@ Panel {
     if (!injector.running) { root.injectError = true; return }
     var code = keyCode(k)
     if (code === undefined) return
+
+    // Track the current word for suggestions.
+    if (k.type === "char") {
+      var ch = k.n
+      if (ch && /^[a-zA-Z]$/.test(ch)) {
+        if (root.typedWord.length === 0) root.wordStartShift = root.shiftOn
+        root.typedWord += ch.toLowerCase()
+      } else {
+        root.typedWord = ""   // symbol / digit breaks the word
+      }
+      root.updateSuggestions()
+    } else if (k.type === "back") {
+      if (root.typedWord.length > 0) root.typedWord = root.typedWord.slice(0, -1)
+      root.updateSuggestions()
+    } else if (k.type === "space" || k.type === "enter" || k.type === "tab") {
+      root.typedWord = ""
+      root.suggestions = []
+    }
+
     root._repeatCode = code
+    root._repeatChar = (k.type === "char" && k.n && /^[a-zA-Z]$/.test(k.n)) ? k.n.toLowerCase() : null
     root.sendHold(code)
     repeatDelay.restart()
   }
@@ -85,6 +119,87 @@ Panel {
     repeatTimer.stop()
     root.sendRelease(root._repeatCode)
     root._repeatCode = null
+  }
+
+  // --- word suggestions ----------------------------------------------------
+
+  // Inject a single ASCII letter, adding a Shift press for uppercase so we do
+  // not depend on the on-screen shift state.
+  function injectChar(ch) {
+    var lower = ch.toLowerCase()
+    var code = lower.charCodeAt(0) - 97 + 30   // evdev: KEY_A=30 .. KEY_Z=55
+    if (code < 30 || code > 55) return
+    if (ch !== lower) root.sendRaw(42, true)
+    root.sendRaw(code, true)
+    root.sendRaw(code, false)
+    if (ch !== lower) root.sendRaw(42, false)
+  }
+
+  // Click a suggestion: delete the currently typed (tracked) word, then type
+  // the suggestion in its place.
+  function applySuggestion(word) {
+    if (!injector.running) { root.injectError = true; return }
+    var n = root.typedWord.length
+    for (var i = 0; i < n; i++) { root.sendRaw(14, true); root.sendRaw(14, false) }
+    var typed = word
+    if (root.wordStartShift && typed.length) typed = typed.charAt(0).toUpperCase() + typed.slice(1)
+    for (var j = 0; j < typed.length; j++) root.injectChar(typed.charAt(j))
+    root.typedWord = typed.toLowerCase()
+    root.suggestions = []
+  }
+
+  function updateSuggestions() {
+    if (root.typedWord.length < 2 || !root.dictReady) { root.suggestions = []; return }
+    root.suggestions = root.suggest(root.typedWord, 4)
+  }
+
+  // Binary-search prefix matches in the sorted dictionary.
+  function suggest(prefix, max) {
+    var arr = root.dictWords
+    if (!arr || !prefix || prefix.length < 2) return []
+    prefix = prefix.toLowerCase()
+    var lo = 0, hi = arr.length
+    while (lo < hi) { var mid = (lo + hi) >> 1; if (arr[mid] < prefix) lo = mid + 1; else hi = mid }
+    var res = []
+    for (var i = lo; i < arr.length && res.length < max; i++) {
+      if (arr[i].indexOf(prefix) !== 0) break
+      res.push(arr[i])
+    }
+    return res
+  }
+
+  function buildDict(raw) {
+    var lines = raw.split("\n")
+    var arr = []
+    for (var i = 0; i < lines.length; i++) {
+      var w = lines[i].trim()
+      if (w.length >= 2 && w.length <= 20) arr.push(w)
+    }
+    arr.sort()
+    root.dictWords = arr
+  }
+
+  // Download + preprocess the language dictionary on first use, then load it.
+  function ensureDict() {
+    var loc = (root.activeLayout === "pt-br") ? "pt" : "en"
+    if (root._loadedLocale === loc && (root.dictReady || root.dictLoading)) return
+    root._loadedLocale = loc
+    root.dictLoading = true
+    var url = "https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/" + loc + "/index.dic"
+    var script = "D=$HOME/.local/share/quill/dict; L=" + loc + "; F=$D/$L.words; mkdir -p $D; " +
+      "if [ ! -f $F ]; then T=$(mktemp); " +
+      "if curl -fsSL '" + url + "' -o $T; then " +
+      "tail -n +2 $T | iconv -f UTF-8 -t ASCII//TRANSLIT | " +
+      "awk '{split($0,a,\"/\"); w=tolower(a[1]); gsub(/[^a-z]/,\"\",w); if(length(w)>=2 && length(w)<=20) print w}' | sort -u > $F; fi; " +
+      "rm -f $T; fi; echo ok"
+    dictSetup.command = ["sh", "-c", script]
+    dictSetup.running = true
+  }
+
+  function loadDictFile() {
+    var loc = root._loadedLocale
+    dictLoad.command = ["sh", "-c", "cat \"$HOME/.local/share/quill/dict/" + loc + ".words\""]
+    dictLoad.running = true
   }
 
   // Native visual tokens (qs.Commons Color/Style), passed into the
@@ -307,6 +422,7 @@ Panel {
 
   // Key auto-repeat: hold a key to repeat it like a real keyboard.
   property var _repeatCode: null
+  property var _repeatChar: null
 
   Timer {
     id: repeatDelay
@@ -323,7 +439,15 @@ Panel {
     interval: 45
     repeat: true
     onTriggered: {
-      if (root._repeatCode !== null) root.sendHold(root._repeatCode)
+      if (root._repeatCode !== null) {
+        root.sendHold(root._repeatCode)
+        if (root._repeatCode === 14) {
+          if (root.typedWord.length > 0) { root.typedWord = root.typedWord.slice(0, -1); root.updateSuggestions() }
+        } else if (root._repeatChar) {
+          root.typedWord += root._repeatChar
+          root.updateSuggestions()
+        }
+      }
     }
   }
 
@@ -355,6 +479,31 @@ Panel {
       raw = raw.toLowerCase()
       if (raw.indexOf("br") >= 0 || raw.indexOf("pt") >= 0) root.activeLayout = "pt-br"
       else root.activeLayout = "us"
+      root.ensureDict()
+    }
+  }
+
+  // Downloads + preprocesses the language dictionary (if absent) then reads it.
+  Process {
+    id: dictSetup
+    running: false
+    stdout: StdioCollector {}
+    onExited: function(code) { root.loadDictFile() }
+  }
+  Process {
+    id: dictLoad
+    running: false
+    property string _raw: ""
+    stdout: StdioCollector { onDataChanged: dictLoad._raw = text }
+    onExited: function(code) {
+      root.dictLoading = false
+      if (code === 0 && dictLoad._raw) {
+        root.buildDict(dictLoad._raw)
+        root.dictReady = true
+        root.updateSuggestions()
+      } else {
+        root.suggestionError = "could not load dictionary"
+      }
     }
   }
 
@@ -368,6 +517,11 @@ Panel {
   Component.onCompleted: {
     injector.running = true
     layoutProbe.running = true
+    root.ensureDict()
+  }
+
+  onOpenedChanged: {
+    if (!root.opened) { root.typedWord = ""; root.suggestions = [] }
   }
 
   QuillPanel {
@@ -418,15 +572,43 @@ Panel {
         }
       }
 
+      Component {
+        id: suggestionDelegate
+        Rectangle {
+          height: root.gripH - 6
+          radius: 4
+          width: lbl.implicitWidth + 12
+          color: sugMA.containsMouse ? Qt.alpha(Color.foreground, 0.20) : Qt.alpha(Color.foreground, 0.12)
+          border.color: root.keyBorder
+          border.width: 1
+
+          Text {
+            id: lbl
+            anchors.centerIn: parent
+            text: modelData
+            color: Color.popups.text
+            font.family: Style.font.family
+            font.pixelSize: 12
+          }
+          MouseArea {
+            id: sugMA
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.applySuggestion(modelData)
+          }
+        }
+      }
+
       Column {
         id: content
         width: parent.width
         spacing: root.keyGap
         anchors.centerIn: parent
 
-        // Header: the whole top bar (except the close button) is the drag handle;
-        // keys themselves no longer drag the keyboard.
-        Row {
+        // Header: left area is the drag handle; the word suggestions appear
+        // centred between it and the close button.
+        RowLayout {
           id: header
           width: parent.width
           height: root.gripH
@@ -434,7 +616,7 @@ Panel {
 
           Item {
             id: grip
-            width: parent.width - closeBtn.width - root.keyGap
+            Layout.fillWidth: true
             height: root.gripH
 
             Text {
@@ -457,6 +639,21 @@ Panel {
                 panel.dragHandle.lastY = panel.dragHandle.y
               }
             }
+          }
+
+          Row {
+            id: sugRow
+            spacing: 6
+            visible: root.suggestions.length > 0
+            Repeater {
+              model: root.suggestions
+              delegate: suggestionDelegate
+            }
+          }
+
+          Item {
+            Layout.fillWidth: true
+            height: root.gripH
           }
 
           Rectangle {
