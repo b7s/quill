@@ -377,7 +377,7 @@ Panel {
 
           Item {
             id: grip
-            width: parent.width - closeBtn.width - root.keyGap
+            width: parent.width - closeBtn.width - pinBtn.width - root.keyGap * 2
             height: root.gripH
 
             Text {
@@ -399,6 +399,26 @@ Panel {
                 panel.dragHandle.lastX = panel.dragHandle.x
                 panel.dragHandle.lastY = panel.dragHandle.y
               }
+            }
+          }
+
+          Rectangle {
+            id: pinBtn
+            width: root.gripH
+            height: root.gripH
+            radius: 4
+            color: panel.pinned ? Qt.alpha(Color.popups.text, 0.20) : Qt.alpha(Color.foreground, 0.12)
+
+            MouseArea {
+              anchors.fill: parent
+              onClicked: panel.pinned = !panel.pinned
+            }
+            Text {
+              anchors.centerIn: parent
+              text: panel.pinned ? "⊙" : "○"
+              color: panel.pinned ? Color.popups.text : Qt.alpha(Color.popups.text, 0.6)
+              font.family: Style.font.family
+              font.pixelSize: 14
             }
           }
 
