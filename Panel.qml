@@ -176,7 +176,7 @@ Panel {
         { n:"3", s:"#", c:4,  type:"char" },
         { n:"4", s:"$", c:5,  type:"char" },
         { n:"5", s:"%", c:6,  type:"char" },
-        { n:"6", s:"^", c:7,  type:"char" },
+        { n:"6", s:"¨", c:7,  type:"char" },
         { n:"7", s:"&", c:8,  type:"char" },
         { n:"8", s:"*", c:9,  type:"char" },
         { n:"9", s:"(", c:10, type:"char" },
@@ -199,7 +199,7 @@ Panel {
         { n:"p", s:"P", c:25, type:"char" },
         { n:"[", s:"{", c:27, type:"char" },
         { n:"]", s:"}", c:43, type:"char" },
-        { n:"´", s:"´", c:26, type:"char" }
+        { n:"´", s:"`", c:26, type:"char" }
       ],
       [
         { n:"Shift", s:"Shift", c:42, type:"shift", w:1.6 },
@@ -218,7 +218,7 @@ Panel {
       ],
       [
         { n:"Ctrl", s:"Ctrl", c:29, type:"ctrl", w:1.6 },
-        { n:"<", s:">", c:86, type:"char" },
+        { n:"\\", s:"|", c:86, type:"char" },
         { n:"z", s:"Z", c:44, type:"char" },
         { n:"x", s:"X", c:45, type:"char" },
         { n:"c", s:"C", c:46, type:"char" },
@@ -226,8 +226,8 @@ Panel {
         { n:"b", s:"B", c:48, type:"char" },
         { n:"n", s:"N", c:49, type:"char" },
         { n:"m", s:"M", c:50, type:"char" },
-        { n:",", s:",", c:51, type:"char" },
-        { n:".", s:".", c:52, type:"char" },
+        { n:",", s:"<", c:51, type:"char" },
+        { n:".", s:">", c:52, type:"char" },
         { n:";", s:":", c:53, type:"char" },
         { n:"/", s:"?", c:181, type:"char" },
         { n:"Ctrl", s:"Ctrl", c:29, type:"ctrl", w:1.3 },
