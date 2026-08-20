@@ -110,36 +110,58 @@ Panel {
     w += (row.length - 1) * root.keyGap
     return w
   }
-  readonly property int kbNaturalWidth: {
+  function kbBlockWidth(rows) {
     var m = 0
-    for (var r = 0; r < root.rows.length; r++) m = Math.max(m, root.kbRowWidth(root.rows[r]))
-    return m + root.pad * 2
+    for (var r = 0; r < rows.length; r++) m = Math.max(m, root.kbRowWidth(rows[r]))
+    return m
   }
-  readonly property int kbNaturalHeight: root.gripH + root.keyGap
-    + root.rows.length * root.keyH + (root.rows.length - 1) * root.keyGap
-    + root.pad * 2
+  readonly property int kbNaturalWidth: {
+    var mainW = root.kbBlockWidth(root.rows)
+    var navW = root.kbBlockWidth(root.navRows)
+    return mainW + root.keyGap + navW + root.pad * 2
+  }
+  readonly property int kbNaturalHeight: {
+    var n = Math.max(root.rows.length, root.navRows.length)
+    return root.gripH + root.keyGap + n * root.keyH + (n - 1) * root.keyGap + root.pad * 2
+  }
 
   // Active layout, auto-detected at startup from the system keyboard layout
   // (Hyprland kb_layout / $LANG). Falls back to "us".
   property string activeLayout: "us"
 
-  // Editing / system cluster (layout-independent) shown as a top row above the main
-  // keyboard. Codes are Linux/evdev keycodes (matching quill-inject).
-  readonly property var navKeys: [
-    { n:"PrtSc", s:"PrtSc", c:99,  type:"fn" },
-    { n:"Scroll", s:"Scroll", c:70, type:"fn" },
-    { n:"Pause", s:"Pause", c:119, type:"fn" },
-    { n:"Ins", s:"Ins", c:110, type:"fn" },
-    { n:"Home", s:"Home", c:102, type:"fn" },
-    { n:"PgUp", s:"PgUp", c:104, type:"fn" },
-    { n:"Del", s:"Del", c:111, type:"fn" },
-    { n:"End", s:"End", c:107, type:"fn" },
-    { n:"PgDn", s:"PgDn", c:109, type:"fn" }
+  // Navigation / editing cluster shown to the right of the main keyboard (like a
+  // real keyboard), with the arrow keys below it. Codes are Linux/evdev keycodes
+  // (matching quill-inject). "spacer" entries reserve a key slot without rendering.
+  readonly property var navRows: [
+    [
+      { n:"PrtSc", s:"PrtSc", c:99,  type:"fn" },
+      { n:"ScrLk", s:"ScrLk", c:70,  type:"fn" },
+      { n:"Pause", s:"Pause", c:119, type:"fn" }
+    ],
+    [
+      { n:"Ins", s:"Ins", c:110, type:"fn" },
+      { n:"Home", s:"Home", c:102, type:"fn" },
+      { n:"PgUp", s:"PgUp", c:104, type:"fn" }
+    ],
+    [
+      { n:"Del", s:"Del", c:111, type:"fn" },
+      { n:"End", s:"End", c:107, type:"fn" },
+      { n:"PgDn", s:"PgDn", c:109, type:"fn" }
+    ],
+    [
+      { type:"spacer" },
+      { n:"↑", s:"↑", c:103, type:"fn" },
+      { type:"spacer" }
+    ],
+    [
+      { n:"←", s:"←", c:105, type:"fn" },
+      { n:"↓", s:"↓", c:108, type:"fn" },
+      { n:"→", s:"→", c:106, type:"fn" }
+    ]
   ]
 
   readonly property var layouts: ({
     "us": [
-      navKeys,
       [
         { n:"1", s:"!", c:2,  type:"char" },
         { n:"2", s:"@", c:3,  type:"char" },
@@ -211,7 +233,6 @@ Panel {
     // (Linux 39) and the /? key (Linux 181 = KEY_International1), plus the
     // 102nd < > key (Linux 86).
     "pt-br": [
-      navKeys,
       [
         { n:"'", s:'"', c:41, type:"char" },
         { n:"1", s:"!", c:2,  type:"char" },
@@ -367,6 +388,36 @@ Panel {
       onCloseRequested: root.close()
       onTabRequested: function(direction) { root.switchPanel(direction) }
 
+      Component {
+        id: keyDelegate
+        QuillKey {
+          key: modelData
+          shift: root.shiftOn
+          active: (modelData.type === "shift" && root.shiftOn)
+            || (modelData.type === "ctrl" && root.ctrlOn)
+            || (modelData.type === "alt" && root.altOn)
+          error: root.injectError
+          surface: root.keySurface
+          surfaceHover: root.keySurfaceHover
+          surfacePressed: root.keySurfacePressed
+          surfaceError: root.keySurfaceError
+          borderColor: root.keyBorder
+          contentColor: root.keyContent
+          contentColorDim: root.keyContentDim
+          keyRadius: Style.space(8)
+          keyFont: Style.font.family
+          keyFontSize: Style.font.body
+          enabled: key.type !== "spacer"
+          opacity: key.type === "spacer" ? 0 : 1
+          Layout.preferredWidth: root.keyBase * (key.w || 1)
+          Layout.preferredHeight: root.keyH
+          Layout.fillWidth: key.type === "shift" || key.type === "ctrl" || key.type === "alt" || key.type === "space" || key.type === "back" || key.type === "tab" || key.type === "enter"
+          Layout.fillHeight: false
+          onPressed: root.keyDown(modelData)
+          onReleased: root.keyReleased(modelData)
+        }
+      }
+
       Column {
         id: content
         width: parent.width
@@ -429,36 +480,33 @@ Panel {
           }
         }
 
-          Repeater {
-            model: root.rows
-            delegate: RowLayout {
-              width: parent.width
+          // Body: main typing block (left) + navigation/edit cluster (right).
+          Row {
+            width: parent.width
+            spacing: root.keyGap
+
+            Column {
+              id: mainBlock
               spacing: root.keyGap
               Repeater {
-                model: modelData
-                delegate: QuillKey {
-                  key: modelData
-                  shift: root.shiftOn
-                  active: (modelData.type === "shift" && root.shiftOn)
-                    || (modelData.type === "ctrl" && root.ctrlOn)
-                    || (modelData.type === "alt" && root.altOn)
-                  error: root.injectError
-                  surface: root.keySurface
-                  surfaceHover: root.keySurfaceHover
-                  surfacePressed: root.keySurfacePressed
-                  surfaceError: root.keySurfaceError
-                  borderColor: root.keyBorder
-                  contentColor: root.keyContent
-                  contentColorDim: root.keyContentDim
-                  keyRadius: Style.space(8)
-                  keyFont: Style.font.family
-                  keyFontSize: Style.font.body
-                  Layout.preferredWidth: root.keyBase * (key.type === "char" ? 1 : (key.w || 1))
-                  Layout.preferredHeight: root.keyH
-                  Layout.fillWidth: key.type !== "char"
-                  Layout.fillHeight: false
-                  onPressed: root.keyDown(modelData)
-                  onReleased: root.keyReleased(modelData)
+                model: root.rows
+                delegate: RowLayout {
+                  width: parent.width
+                  spacing: root.keyGap
+                  Repeater { model: modelData; delegate: keyDelegate }
+                }
+              }
+            }
+
+            Column {
+              id: navBlock
+              spacing: root.keyGap
+              Repeater {
+                model: root.navRows
+                delegate: RowLayout {
+                  width: parent.width
+                  spacing: root.keyGap
+                  Repeater { model: modelData; delegate: keyDelegate }
                 }
               }
             }
