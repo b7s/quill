@@ -297,6 +297,26 @@ PanelWindow {
     }
   }
 
+  // --- drag proxy ----------------------------------------------------------
+  // Lives at the panel-window (screen) level, NOT inside the card, so it never
+  // moves when `dragOffset` changes — that keeps the drag math free of feedback
+  // loops. The grab handle in Panel.qml drives `drag.target` here; we translate
+  // the screen-space deltas into `dragOffset`.
+  Item {
+    id: dragProxy
+    property real lastX: 0
+    property real lastY: 0
+    onXChanged: {
+      root.dragOffset = Qt.point(root.dragOffset.x + (x - lastX), root.dragOffset.y)
+      lastX = x
+    }
+    onYChanged: {
+      root.dragOffset = Qt.point(root.dragOffset.x, root.dragOffset.y + (y - lastY))
+      lastY = y
+    }
+  }
+  property alias dragHandle: dragProxy
+
   // --- card ----------------------------------------------------------------
 
   BorderSurface {

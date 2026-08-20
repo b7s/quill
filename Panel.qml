@@ -61,7 +61,7 @@ Panel {
   readonly property int keyGap: Style.space(6)
   readonly property int keyBase: 40
   readonly property int keyH: 46
-  readonly property int gripH: Style.space(18)
+  readonly property int gripH: 22
   readonly property int pad: Style.spacing.popupPadding
 
   function kbRowWidth(row) {
@@ -191,51 +191,71 @@ Panel {
       onCloseRequested: root.close()
       onTabRequested: function(direction) { root.switchPanel(direction) }
 
+      // Full-surface drag layer (behind the keys) so the keyboard can be moved
+      // by click-and-hold-drag anywhere, including gaps and padding.
+      MouseArea {
+        id: dragLayer
+        anchors.fill: parent
+        drag.target: panel.dragHandle
+        drag.axis: Drag.XAndYAxis
+        drag.threshold: 6
+        onPressed: {
+          panel.dragHandle.lastX = panel.dragHandle.x
+          panel.dragHandle.lastY = panel.dragHandle.y
+        }
+      }
+
       Column {
         id: content
         width: parent.width
         spacing: root.keyGap
         anchors.centerIn: parent
 
-        // Header: drag handle (grab to move the keyboard) + close button.
+        // Header: drag icon (top-left) + close button (top-right). The drag
+        // icon drives the panel's stable dragHandle proxy, so the whole gesture
+        // is captured and the keyboard follows the cursor smoothly.
         Row {
           id: header
           width: parent.width
+          height: root.gripH
           spacing: root.keyGap
 
-          Rectangle {
+          Item {
             id: grip
-            width: parent.width - closeBtn.width - root.keyGap
-            height: Style.space(18)
-            radius: 4
-            color: Qt.alpha(Color.foreground, 0.10)
-            property point last: Qt.point(0, 0)
+            width: root.gripH
+            height: root.gripH
+
+            Text {
+              anchors.centerIn: parent
+              text: "⠿"
+              color: Qt.alpha(Color.popups.text, 0.55)
+              font.family: Style.font.family
+              font.pixelSize: 14
+            }
 
             MouseArea {
               anchors.fill: parent
               cursorShape: Qt.SizeAllCursor
-              onPressed: function(mouse) { grip.last = grip.mapToItem(keyCatcher, mouse.x, mouse.y) }
-              onPositionChanged: function(mouse) {
-                if (!pressed) return
-                var g = grip.mapToItem(keyCatcher, mouse.x, mouse.y)
-                panel.dragOffset = Qt.point(panel.dragOffset.x + (g.x - grip.last.x), panel.dragOffset.y + (g.y - grip.last.y))
-                grip.last = g
+              drag.target: panel.dragHandle
+              drag.axis: Drag.XAndYAxis
+              drag.smoothed: false
+              onPressed: {
+                panel.dragHandle.lastX = panel.dragHandle.x
+                panel.dragHandle.lastY = panel.dragHandle.y
               }
             }
+          }
 
-            Text {
-              anchors.centerIn: parent
-              text: "⠿  drag"
-              color: Qt.alpha(Color.popups.text, 0.6)
-              font.family: Style.font.family
-              font.pixelSize: 11
-            }
+          Item {
+            id: spacer
+            width: parent.width - grip.width - closeBtn.width - root.keyGap * 2
+            height: 1
           }
 
           Rectangle {
             id: closeBtn
-            width: 22
-            height: 22
+            width: root.gripH
+            height: root.gripH
             radius: 4
             color: Qt.alpha(Color.foreground, 0.12)
 
@@ -267,6 +287,8 @@ Panel {
                 surfaceHover: root.keySurfaceHover
                 surfacePressed: root.keySurfacePressed
                 surfaceError: root.keySurfaceError
+                boardWidth: root.kbNaturalWidth - root.pad * 2
+                dragTarget: panel.dragHandle
                 borderColor: root.keyBorder
                 contentColor: root.keyContent
                 contentColorDim: root.keyContentDim

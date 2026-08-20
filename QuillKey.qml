@@ -23,9 +23,16 @@ Item {
   property int keyFontSize: 14
   signal pressed(var key)
 
+  // Inner width of the whole keyboard; the Space key stretches to fill it.
+  property int boardWidth: 0
+
+  // Set by the parent so the key can also act as a drag handle: a click types,
+  // but a press-and-move drags the whole keyboard.
+  property var dragTarget: null
+
   readonly property real span: (key && key.w) ? key.w : 1
 
-  implicitWidth: 40 * span
+  implicitWidth: (key && key.type === "space" && boardWidth > 0) ? boardWidth : 40 * span
   implicitHeight: 46
 
   Rectangle {
@@ -51,6 +58,15 @@ Item {
     id: mouse
     anchors.fill: parent
     hoverEnabled: true
+    drag.target: root.dragTarget
+    drag.axis: Drag.XAndYAxis
+    drag.threshold: 6
     onClicked: root.pressed(root.key)
+    onPressed: {
+      if (root.dragTarget) {
+        root.dragTarget.lastX = root.dragTarget.x
+        root.dragTarget.lastY = root.dragTarget.y
+      }
+    }
   }
 }
