@@ -91,72 +91,154 @@ Panel {
     + root.rows.length * root.keyH + (root.rows.length - 1) * root.keyGap
     + root.pad * 2
 
-  property var rows: [
-    [
-      { n:"1", s:"!", c:2,  type:"char" },
-      { n:"2", s:"@", c:3,  type:"char" },
-      { n:"3", s:"#", c:4,  type:"char" },
-      { n:"4", s:"$", c:5,  type:"char" },
-      { n:"5", s:"%", c:6,  type:"char" },
-      { n:"6", s:"^", c:7,  type:"char" },
-      { n:"7", s:"&", c:8,  type:"char" },
-      { n:"8", s:"*", c:9,  type:"char" },
-      { n:"9", s:"(", c:10, type:"char" },
-      { n:"0", s:")", c:11, type:"char" },
-      { n:"-", s:"_", c:12, type:"char" },
-      { n:"=", s:"+", c:13, type:"char" },
-      { n:"⌫", s:"⌫", c:14, type:"back", w:1.6 }
+  // Active layout, auto-detected at startup from the system keyboard layout
+  // (Hyprland kb_layout / $LANG). Falls back to "us".
+  property string activeLayout: "us"
+
+  readonly property var layouts: ({
+    "us": [
+      [
+        { n:"1", s:"!", c:2,  type:"char" },
+        { n:"2", s:"@", c:3,  type:"char" },
+        { n:"3", s:"#", c:4,  type:"char" },
+        { n:"4", s:"$", c:5,  type:"char" },
+        { n:"5", s:"%", c:6,  type:"char" },
+        { n:"6", s:"^", c:7,  type:"char" },
+        { n:"7", s:"&", c:8,  type:"char" },
+        { n:"8", s:"*", c:9,  type:"char" },
+        { n:"9", s:"(", c:10, type:"char" },
+        { n:"0", s:")", c:11, type:"char" },
+        { n:"-", s:"_", c:12, type:"char" },
+        { n:"=", s:"+", c:13, type:"char" },
+        { n:"⌫", s:"⌫", c:14, type:"back", w:1.6 }
+      ],
+      [
+        { n:"Tab", s:"Tab", c:15, type:"tab", w:1.4 },
+        { n:"q", s:"Q", c:16, type:"char" },
+        { n:"w", s:"W", c:17, type:"char" },
+        { n:"e", s:"E", c:18, type:"char" },
+        { n:"r", s:"R", c:19, type:"char" },
+        { n:"t", s:"T", c:20, type:"char" },
+        { n:"y", s:"Y", c:21, type:"char" },
+        { n:"u", s:"U", c:22, type:"char" },
+        { n:"i", s:"I", c:23, type:"char" },
+        { n:"o", s:"O", c:24, type:"char" },
+        { n:"p", s:"P", c:25, type:"char" },
+        { n:"[", s:"{", c:26, type:"char" },
+        { n:"]", s:"}", c:27, type:"char" },
+        { n:"\\", s:"|", c:43, type:"char" }
+      ],
+      [
+        { n:"Shift", s:"Shift", c:42, type:"shift", w:1.6 },
+        { n:"a", s:"A", c:30, type:"char" },
+        { n:"s", s:"S", c:31, type:"char" },
+        { n:"d", s:"D", c:32, type:"char" },
+        { n:"f", s:"F", c:33, type:"char" },
+        { n:"g", s:"G", c:34, type:"char" },
+        { n:"h", s:"H", c:35, type:"char" },
+        { n:"j", s:"J", c:36, type:"char" },
+        { n:"k", s:"K", c:37, type:"char" },
+        { n:"l", s:"L", c:38, type:"char" },
+        { n:";", s:":", c:39, type:"char" },
+        { n:"'", s:'"', c:40, type:"char" },
+        { n:"Enter", s:"Enter", c:28, type:"enter", w:1.8 }
+      ],
+      [
+        { n:"Ctrl", s:"Ctrl", c:29, type:"ctrl", w:1.6 },
+        { n:"z", s:"Z", c:44, type:"char" },
+        { n:"x", s:"X", c:45, type:"char" },
+        { n:"c", s:"C", c:46, type:"char" },
+        { n:"v", s:"V", c:47, type:"char" },
+        { n:"b", s:"B", c:48, type:"char" },
+        { n:"n", s:"N", c:49, type:"char" },
+        { n:"m", s:"M", c:50, type:"char" },
+        { n:",", s:"<", c:51, type:"char" },
+        { n:".", s:">", c:52, type:"char" },
+        { n:"/", s:"?", c:53, type:"char" },
+        { n:"Ctrl", s:"Ctrl", c:29, type:"ctrl", w:1.3 },
+        { n:"Alt", s:"Alt", c:56, type:"alt", w:1.3 }
+      ],
+      [
+        { n:"Space", s:"Space", c:57, type:"space", w:7 }
+      ]
     ],
-    [
-      { n:"Tab", s:"Tab", c:15, type:"tab", w:1.4 },
-      { n:"q", s:"Q", c:16, type:"char" },
-      { n:"w", s:"W", c:17, type:"char" },
-      { n:"e", s:"E", c:18, type:"char" },
-      { n:"r", s:"R", c:19, type:"char" },
-      { n:"t", s:"T", c:20, type:"char" },
-      { n:"y", s:"Y", c:21, type:"char" },
-      { n:"u", s:"U", c:22, type:"char" },
-      { n:"i", s:"I", c:23, type:"char" },
-      { n:"o", s:"O", c:24, type:"char" },
-      { n:"p", s:"P", c:25, type:"char" },
-      { n:"[", s:"{", c:26, type:"char" },
-      { n:"]", s:"}", c:27, type:"char" },
-      { n:"\\", s:"|", c:43, type:"char" }
-    ],
-    [
-      { n:"Shift", s:"Shift", c:42, type:"shift", w:1.6 },
-      { n:"a", s:"A", c:30, type:"char" },
-      { n:"s", s:"S", c:31, type:"char" },
-      { n:"d", s:"D", c:32, type:"char" },
-      { n:"f", s:"F", c:33, type:"char" },
-      { n:"g", s:"G", c:34, type:"char" },
-      { n:"h", s:"H", c:35, type:"char" },
-      { n:"j", s:"J", c:36, type:"char" },
-      { n:"k", s:"K", c:37, type:"char" },
-      { n:"l", s:"L", c:38, type:"char" },
-      { n:";", s:":", c:39, type:"char" },
-      { n:"'", s:"\"", c:40, type:"char" },
-      { n:"Enter", s:"Enter", c:28, type:"enter", w:1.8 }
-    ],
-    [
-      { n:"Ctrl", s:"Ctrl", c:29, type:"ctrl", w:1.6 },
-      { n:"z", s:"Z", c:44, type:"char" },
-      { n:"x", s:"X", c:45, type:"char" },
-      { n:"c", s:"C", c:46, type:"char" },
-      { n:"v", s:"V", c:47, type:"char" },
-      { n:"b", s:"B", c:48, type:"char" },
-      { n:"n", s:"N", c:49, type:"char" },
-      { n:"m", s:"M", c:50, type:"char" },
-      { n:",", s:"<", c:51, type:"char" },
-      { n:".", s:">", c:52, type:"char" },
-      { n:"/", s:"?", c:53, type:"char" },
-      { n:"Ctrl", s:"Ctrl", c:29, type:"ctrl", w:1.3 },
-      { n:"Alt", s:"Alt", c:56, type:"alt", w:1.3 }
-    ],
-    [
-      { n:"Space", s:"Space", c:57, type:"space", w:7 }
+
+    // Portuguese (Brazil) ABNT2. Keycodes taken from the system xkb symbols
+    // (/usr/share/X11/xkb/symbols/br); the two extra ABNT keys are the Ç key
+    // (Linux 39) and the /? key (Linux 181 = KEY_International1), plus the
+    // 102nd < > key (Linux 86).
+    "pt-br": [
+      [
+        { n:"'", s:'"', c:41, type:"char" },
+        { n:"1", s:"!", c:2,  type:"char" },
+        { n:"2", s:"@", c:3,  type:"char" },
+        { n:"3", s:"#", c:4,  type:"char" },
+        { n:"4", s:"$", c:5,  type:"char" },
+        { n:"5", s:"%", c:6,  type:"char" },
+        { n:"6", s:"^", c:7,  type:"char" },
+        { n:"7", s:"&", c:8,  type:"char" },
+        { n:"8", s:"*", c:9,  type:"char" },
+        { n:"9", s:"(", c:10, type:"char" },
+        { n:"0", s:")", c:11, type:"char" },
+        { n:"-", s:"_", c:12, type:"char" },
+        { n:"=", s:"+", c:13, type:"char" },
+        { n:"⌫", s:"⌫", c:14, type:"back", w:1.6 }
+      ],
+      [
+        { n:"Tab", s:"Tab", c:15, type:"tab", w:1.4 },
+        { n:"q", s:"Q", c:16, type:"char" },
+        { n:"w", s:"W", c:17, type:"char" },
+        { n:"e", s:"E", c:18, type:"char" },
+        { n:"r", s:"R", c:19, type:"char" },
+        { n:"t", s:"T", c:20, type:"char" },
+        { n:"y", s:"Y", c:21, type:"char" },
+        { n:"u", s:"U", c:22, type:"char" },
+        { n:"i", s:"I", c:23, type:"char" },
+        { n:"o", s:"O", c:24, type:"char" },
+        { n:"p", s:"P", c:25, type:"char" },
+        { n:"[", s:"{", c:27, type:"char" },
+        { n:"]", s:"}", c:43, type:"char" },
+        { n:"´", s:"´", c:26, type:"char" }
+      ],
+      [
+        { n:"Shift", s:"Shift", c:42, type:"shift", w:1.6 },
+        { n:"a", s:"A", c:30, type:"char" },
+        { n:"s", s:"S", c:31, type:"char" },
+        { n:"d", s:"D", c:32, type:"char" },
+        { n:"f", s:"F", c:33, type:"char" },
+        { n:"g", s:"G", c:34, type:"char" },
+        { n:"h", s:"H", c:35, type:"char" },
+        { n:"j", s:"J", c:36, type:"char" },
+        { n:"k", s:"K", c:37, type:"char" },
+        { n:"l", s:"L", c:38, type:"char" },
+        { n:"Ç", s:"ç", c:39, type:"char" },
+        { n:"~", s:"^", c:40, type:"char" },
+        { n:"Enter", s:"Enter", c:28, type:"enter", w:1.8 }
+      ],
+      [
+        { n:"Shift", s:"Shift", c:42, type:"shift", w:1.6 },
+        { n:"<", s:">", c:86, type:"char" },
+        { n:"z", s:"Z", c:44, type:"char" },
+        { n:"x", s:"X", c:45, type:"char" },
+        { n:"c", s:"C", c:46, type:"char" },
+        { n:"v", s:"V", c:47, type:"char" },
+        { n:"b", s:"B", c:48, type:"char" },
+        { n:"n", s:"N", c:49, type:"char" },
+        { n:"m", s:"M", c:50, type:"char" },
+        { n:",", s:",", c:51, type:"char" },
+        { n:".", s:".", c:52, type:"char" },
+        { n:";", s:":", c:53, type:"char" },
+        { n:"/", s:"?", c:181, type:"char" },
+        { n:"Ctrl", s:"Ctrl", c:29, type:"ctrl", w:1.3 },
+        { n:"Alt", s:"Alt", c:56, type:"alt", w:1.3 }
+      ],
+      [
+        { n:"Space", s:"Space", c:57, type:"space", w:7 }
+      ]
     ]
-  ]
+  })
+
+  property var rows: layouts[activeLayout] || layouts["us"]
 
   Process {
     id: injector
@@ -169,6 +251,26 @@ Panel {
     }
   }
 
+  // Detect the system keyboard layout at startup so the on-screen layout matches
+  // the physical one (e.g. "br" -> pt-br ABNT2). Reads Hyprland's kb_layout,
+  // falling back to $LANG, normalised to a known layout id.
+  Process {
+    id: layoutProbe
+    running: false
+    command: ["sh", "-c", "h=$(hyprctl -j getoption input.kb_layout 2>/dev/null); [ -z \"$h\" ] && h=\"$LANG\"; printf \"%s\" \"$h\""]
+    stdout: StdioCollector { onDataChanged: layoutProbe._probeRaw = text }
+    property string _probeRaw: ""
+    onExited: function(code) {
+      var raw = layoutProbe._probeRaw.trim()
+      if (raw.charAt(0) === "{") {
+        try { var j = JSON.parse(raw); if (j && j.str) raw = j.str } catch (e) {}
+      }
+      raw = raw.toLowerCase()
+      if (raw.indexOf("br") >= 0 || raw.indexOf("pt") >= 0) root.activeLayout = "pt-br"
+      else root.activeLayout = "us"
+    }
+  }
+
   Timer {
     id: restartTimer
     interval: 1500
@@ -176,7 +278,10 @@ Panel {
     onTriggered: injector.running = true
   }
 
-  Component.onCompleted: injector.running = true
+  Component.onCompleted: {
+    injector.running = true
+    layoutProbe.running = true
+  }
 
   QuillPanel {
     id: panel
