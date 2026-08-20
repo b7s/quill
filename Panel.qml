@@ -12,6 +12,8 @@ Panel {
   property var anchorItem: null
   property var hostWidget: null
   property bool shiftOn: false
+  property bool ctrlOn: false
+  property bool altOn: false
   property bool injectError: false
   property bool wantInjector: true
 
@@ -32,20 +34,29 @@ Panel {
   function pressKey(key) {
     if (!key) return
     if (key.type === "shift") { root.shiftOn = !root.shiftOn; return }
+    if (key.type === "ctrl") { root.ctrlOn = !root.ctrlOn; return }
+    if (key.type === "alt") { root.altOn = !root.altOn; return }
     if (!injector.running) { root.injectError = true; return }
-    if (key.type === "char") {
-      if (root.shiftOn) root.sendRaw(42, true)
-      root.sendRaw(key.c, true)
-      root.sendRaw(key.c, false)
-      if (root.shiftOn) root.sendRaw(42, false)
-      return
+    var code = key.c
+    if (code === undefined) {
+      var map = { "back": 14, "enter": 28, "tab": 15, "space": 57 }
+      code = map[key.type]
     }
-    var map = { "back": 14, "enter": 28, "tab": 15, "space": 57 }
-    var code = map[key.type]
-    if (code !== undefined) {
-      root.sendRaw(code, true)
-      root.sendRaw(code, false)
-    }
+    if (code === undefined) return
+    root.sendWithMods(code)
+  }
+
+  // Send a keycode wrapped in the currently-held sticky modifiers (Ctrl, Alt,
+  // Shift), pressed first and released last, exactly like a real chord.
+  function sendWithMods(code) {
+    if (root.ctrlOn) root.sendRaw(29, true)
+    if (root.altOn) root.sendRaw(56, true)
+    if (root.shiftOn) root.sendRaw(42, true)
+    root.sendRaw(code, true)
+    root.sendRaw(code, false)
+    if (root.shiftOn) root.sendRaw(42, false)
+    if (root.altOn) root.sendRaw(56, false)
+    if (root.ctrlOn) root.sendRaw(29, false)
   }
 
   // Native visual tokens (qs.Commons Color/Style), passed into the
@@ -137,7 +148,9 @@ Panel {
       { n:"m", s:"M", c:50, type:"char" },
       { n:",", s:"<", c:51, type:"char" },
       { n:".", s:">", c:52, type:"char" },
-      { n:"/", s:"?", c:53, type:"char" }
+      { n:"/", s:"?", c:53, type:"char" },
+      { n:"Ctrl", s:"Ctrl", c:29, type:"ctrl", w:1.3 },
+      { n:"Alt", s:"Alt", c:56, type:"alt", w:1.3 }
     ],
     [
       { n:"Space", s:"Space", c:57, type:"space", w:7 }
@@ -282,6 +295,9 @@ Panel {
               delegate:               QuillKey {
                 key: modelData
                 shift: root.shiftOn
+                active: (modelData.type === "shift" && root.shiftOn)
+                  || (modelData.type === "ctrl" && root.ctrlOn)
+                  || (modelData.type === "alt" && root.altOn)
                 error: root.injectError
                 surface: root.keySurface
                 surfaceHover: root.keySurfaceHover

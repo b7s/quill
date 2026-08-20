@@ -10,6 +10,7 @@ Item {
   id: root
   property var key: null
   property bool shift: false
+  property bool active: false
   property bool error: false
   property color surface: "#2a2a2a"
   property color surfaceHover: "#333333"
@@ -39,7 +40,7 @@ Item {
     anchors.fill: parent
     radius: root.keyRadius
     color: mouse.pressed ? root.surfacePressed
-      : (root.error ? root.surfaceError : (mouse.containsMouse ? root.surfaceHover : root.surface))
+      : (root.error ? root.surfaceError : (root.active ? root.surfacePressed : (mouse.containsMouse ? root.surfaceHover : root.surface)))
     border.color: root.borderColor
     border.width: 1
 
@@ -47,7 +48,9 @@ Item {
       anchors.centerIn: parent
       text: (root.key && (root.shift ? root.key.s : root.key.n)) || ""
       color: root.error ? "#ff9a9a"
-        : (root.key && root.key.type === "shift" ? root.contentColorDim : root.contentColor)
+        : (root.key && (root.key.type === "shift" || root.key.type === "ctrl" || root.key.type === "alt")
+            ? (root.active ? root.contentColor : root.contentColorDim)
+            : root.contentColor)
       font.family: root.keyFont
       font.pixelSize: root.keyFontSize
       font.bold: root.key && root.key.type === "enter"
