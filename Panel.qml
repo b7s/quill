@@ -125,10 +125,21 @@ Panel {
 
   // Inject a single ASCII letter, adding a Shift press for uppercase so we do
   // not depend on the on-screen shift state.
+  // Correct Linux evdev keycodes for a-z (not consecutive!)
+  function letterCode(ch) {
+    var map = {
+      "a": 30, "b": 48, "c": 46, "d": 32, "e": 18, "f": 33, "g": 34, "h": 35,
+      "i": 23, "j": 36, "k": 37, "l": 38, "m": 50, "n": 49, "o": 24, "p": 25,
+      "q": 16, "r": 19, "s": 31, "t": 20, "u": 22, "v": 47, "w": 17, "x": 45,
+      "y": 21, "z": 44
+    };
+    return map[ch];
+  }
+
   function injectChar(ch) {
     var lower = ch.toLowerCase()
-    var code = lower.charCodeAt(0) - 97 + 30   // evdev: KEY_A=30 .. KEY_Z=55
-    if (code < 30 || code > 55) return
+    var code = root.letterCode(lower)
+    if (code === undefined) return
     if (ch !== lower) root.sendRaw(42, true)
     root.sendRaw(code, true)
     root.sendRaw(code, false)
@@ -521,7 +532,8 @@ Panel {
   }
 
   onOpenedChanged: {
-    if (!root.opened) { root.typedWord = ""; root.suggestions = [] }
+    root.typedWord = ""
+    root.suggestions = []
   }
 
   QuillPanel {
