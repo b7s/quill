@@ -73,7 +73,8 @@ Panel {
   readonly property int keyBase: 40
   readonly property int keyH: 46
   readonly property int gripH: 22
-  readonly property int pad: Style.spacing.popupPadding
+  // Uniform, small padding used for all sides of the keyboard surface.
+  readonly property int pad: 8
 
   function kbRowWidth(row) {
     var w = 0
@@ -84,11 +85,10 @@ Panel {
   readonly property int kbNaturalWidth: {
     var m = 0
     for (var r = 0; r < root.rows.length; r++) m = Math.max(m, root.kbRowWidth(root.rows[r]))
-    return m + root.pad * 2
+    return m
   }
   readonly property int kbNaturalHeight: root.gripH + root.keyGap
     + root.rows.length * root.keyH + (root.rows.length - 1) * root.keyGap
-    + root.pad * 2
 
   property var rows: [
     [
@@ -180,6 +180,7 @@ Panel {
   QuillPanel {
     id: panel
     takeFocus: false
+    padding: root.pad
     anchorItem: root.anchorItem
     owner: root.hostWidget || root
     bar: root.bar
@@ -303,7 +304,7 @@ Panel {
                 surfaceHover: root.keySurfaceHover
                 surfacePressed: root.keySurfacePressed
                 surfaceError: root.keySurfaceError
-                boardWidth: root.kbNaturalWidth - root.pad * 2
+                boardWidth: root.kbNaturalWidth
                 dragTarget: panel.dragHandle
                 borderColor: root.keyBorder
                 contentColor: root.keyContent
