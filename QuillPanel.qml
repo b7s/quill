@@ -32,9 +32,6 @@ PanelWindow {
   property var borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, Math.max(1, Style.space(2)))
   property bool centerOnBar: false
   property bool open: false
-  // When true the panel stays open and ignores outside-click dismissal (the
-  // "pin"/fix button in Panel.qml toggles this).
-  property bool pinned: false
   property int gap: Style.gapsOut
   property bool popoutSwitching: false
   property bool popoutSwitchClosing: false
@@ -264,7 +261,6 @@ PanelWindow {
     onExited: hoveringBar = false
     onClicked: function(mouse) {
       if (root.takeFocus && root.focusPrimed && inBarRegion(mouse.x, mouse.y) && forwardBarClick(mouse.x, mouse.y, mouse.button)) return
-      if (root.pinned) return
       root.close()
     }
   }
@@ -295,7 +291,7 @@ PanelWindow {
         MouseArea {
           anchors.fill: parent
           acceptedButtons: Qt.AllButtons
-          onPressed: if (!root.pinned) root.close()
+          onPressed: root.close()
         }
       }
     }

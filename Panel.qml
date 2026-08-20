@@ -27,17 +27,6 @@ Panel {
     return false
   }
 
-  // Snap the keyboard to the bottom-center of the screen (used when pinning, so
-  // "fix on bottom" is visible). Only meaningful in bare-panel mode (no bar).
-  function dockToBottom() {
-    if (root.bar || !panel.screen) return
-    var w = panel.contentWidth, h = panel.contentHeight
-    panel.dragOffset = Qt.point(
-      Math.round(panel.screen.width / 2 - w / 2),
-      Math.round(panel.screen.height - h - Style.space(24))
-    )
-  }
-
   function sendRaw(code, down) {
     if (!injector.running) return
     injector.write((down ? "d " : "u ") + code + "\n")
@@ -388,7 +377,7 @@ Panel {
 
           Item {
             id: grip
-            width: parent.width - closeBtn.width - pinBtn.width - root.keyGap * 2
+            width: parent.width - closeBtn.width - root.keyGap
             height: root.gripH
 
             Text {
@@ -410,29 +399,6 @@ Panel {
                 panel.dragHandle.lastX = panel.dragHandle.x
                 panel.dragHandle.lastY = panel.dragHandle.y
               }
-            }
-          }
-
-          Rectangle {
-            id: pinBtn
-            width: root.gripH
-            height: root.gripH
-            radius: 4
-            color: panel.pinned ? Qt.alpha(Color.popups.text, 0.20) : Qt.alpha(Color.foreground, 0.12)
-
-            MouseArea {
-              anchors.fill: parent
-              onClicked: {
-                panel.pinned = !panel.pinned
-                if (panel.pinned && !root.bar) root.dockToBottom()
-              }
-            }
-            Text {
-              anchors.centerIn: parent
-              text: panel.pinned ? "⊙" : "○"
-              color: panel.pinned ? Color.popups.text : Qt.alpha(Color.popups.text, 0.6)
-              font.family: Style.font.family
-              font.pixelSize: 14
             }
           }
 
