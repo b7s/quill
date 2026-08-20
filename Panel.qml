@@ -27,6 +27,17 @@ Panel {
     return false
   }
 
+  // Snap the keyboard to the bottom-center of the screen (used when pinning, so
+  // "fix on bottom" is visible). Only meaningful in bare-panel mode (no bar).
+  function dockToBottom() {
+    if (root.bar || !panel.screen) return
+    var w = panel.contentWidth, h = panel.contentHeight
+    panel.dragOffset = Qt.point(
+      Math.round(panel.screen.width / 2 - w / 2),
+      Math.round(panel.screen.height - h - Style.space(24))
+    )
+  }
+
   function sendRaw(code, down) {
     if (!injector.running) return
     injector.write((down ? "d " : "u ") + code + "\n")
@@ -411,7 +422,10 @@ Panel {
 
             MouseArea {
               anchors.fill: parent
-              onClicked: panel.pinned = !panel.pinned
+              onClicked: {
+                panel.pinned = !panel.pinned
+                if (panel.pinned && !root.bar) root.dockToBottom()
+              }
             }
             Text {
               anchors.centerIn: parent
