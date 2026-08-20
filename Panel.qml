@@ -123,8 +123,23 @@ Panel {
   // (Hyprland kb_layout / $LANG). Falls back to "us".
   property string activeLayout: "us"
 
+  // Editing / system cluster (layout-independent) shown as a top row above the main
+  // keyboard. Codes are Linux/evdev keycodes (matching quill-inject).
+  readonly property var navKeys: [
+    { n:"PrtSc", s:"PrtSc", c:99,  type:"fn" },
+    { n:"Scroll", s:"Scroll", c:70, type:"fn" },
+    { n:"Pause", s:"Pause", c:119, type:"fn" },
+    { n:"Ins", s:"Ins", c:110, type:"fn" },
+    { n:"Home", s:"Home", c:102, type:"fn" },
+    { n:"PgUp", s:"PgUp", c:104, type:"fn" },
+    { n:"Del", s:"Del", c:111, type:"fn" },
+    { n:"End", s:"End", c:107, type:"fn" },
+    { n:"PgDn", s:"PgDn", c:109, type:"fn" }
+  ]
+
   readonly property var layouts: ({
     "us": [
+      navKeys,
       [
         { n:"1", s:"!", c:2,  type:"char" },
         { n:"2", s:"@", c:3,  type:"char" },
@@ -196,6 +211,7 @@ Panel {
     // (Linux 39) and the /? key (Linux 181 = KEY_International1), plus the
     // 102nd < > key (Linux 86).
     "pt-br": [
+      navKeys,
       [
         { n:"'", s:'"', c:41, type:"char" },
         { n:"1", s:"!", c:2,  type:"char" },
