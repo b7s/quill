@@ -138,7 +138,7 @@ Panel {
       { n:"Enter", s:"Enter", c:28, type:"enter", w:1.8 }
     ],
     [
-      { n:"Shift", s:"Shift", c:42, type:"shift", w:1.6 },
+      { n:"Ctrl", s:"Ctrl", c:29, type:"ctrl", w:1.6 },
       { n:"z", s:"Z", c:44, type:"char" },
       { n:"x", s:"X", c:45, type:"char" },
       { n:"c", s:"C", c:46, type:"char" },
