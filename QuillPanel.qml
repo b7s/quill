@@ -75,7 +75,7 @@ PanelWindow {
   property var _activeScreen: null
 
   // Persisted position.
-  readonly property string _posPath: "~/.config/omarchy/plugins/io.github.b7s.quill/quill.pos"
+  readonly property string _posPath: "~/.local/state/omarchy/quill.pos"
   property string _posScreenName: ""
   property bool _hasSavedPos: false
   property var _savedScreen: null
@@ -139,7 +139,7 @@ PanelWindow {
   Process {
     id: posRead
     running: false
-    command: ["sh", "-c", "cat ~/.config/omarchy/plugins/io.github.b7s.quill/quill.pos 2>/dev/null || true"]
+    command: ["sh", "-c", "cat ~/.local/state/omarchy/quill.pos 2>/dev/null || true"]
     stdout: StdioCollector { onDataChanged: posRead._raw = text }
     property string _raw: ""
     onExited: function(code) {
@@ -156,7 +156,7 @@ PanelWindow {
   Process {
     id: posWrite
     running: false
-    command: ["sh", "-c", "printf '%s' '" + root._posScreenName + "|" + Math.round(root.dragOffset.x) + "|" + Math.round(root.dragOffset.y) + "' > ~/.config/omarchy/plugins/io.github.b7s.quill/quill.pos"]
+    command: ["sh", "-c", "mkdir -p ~/.local/state/omarchy && printf '%s' '" + root._posScreenName + "|" + Math.round(root.dragOffset.x) + "|" + Math.round(root.dragOffset.y) + "' > ~/.local/state/omarchy/quill.pos"]
   }
   Timer {
     id: posSaveTimer
