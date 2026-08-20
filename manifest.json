@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.b7s.quill",
+  "name": "Quill Virtual Keyboard",
+  "version": "1.0.0",
+  "author": "Bruno",
+  "license": "MIT",
+  "description": "An on-screen virtual keyboard for Omarchy that injects keystrokes via a local uinput helper. Usable as a floating app (summon it) or a bar widget. Drag the handle to move it anywhere.",
+  "kinds": [
+    "bar-widget",
+    "panel"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Virtual Keyboard",
+    "category": "Utility",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  },
+  "panel": {
+    "displayName": "Virtual Keyboard",
+    "defaultKind": "floating"
+  }
+}

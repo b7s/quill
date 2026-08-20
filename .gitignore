@@ -1,0 +1,11 @@
+# Built native helper
+/quill-inject
+quill-inject
+
+# Build dirs
+/build/
+cmake-build-*/
+
+# Editor/OS noise
+*.swp
+.DS_Store
