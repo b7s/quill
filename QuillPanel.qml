@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
@@ -63,8 +64,48 @@ PanelWindow {
 
   // --- screen + lifetime ---------------------------------------------------
 
+  // Detected active (focused) monitor, used as the fallback screen when the
+  // panel is not anchored to a bar. Keeps the keyboard on the screen the user is
+  // actually working on instead of always the first one.
+  property string _activeScreenName: ""
+  property var _activeScreen: null
+
+  function resolveScreen() {
+    if (root._activeScreenName) {
+      for (var i = 0; i < Quickshell.screens.length; i++) {
+        if (Quickshell.screens[i].name === root._activeScreenName) {
+          root._activeScreen = Quickshell.screens[i]
+          return
+        }
+      }
+    }
+    root._activeScreen = null
+  }
+
   screen: anchorWindow ? anchorWindow.screen
-    : (Quickshell.screens.length ? Quickshell.screens[0] : null)
+    : (root._activeScreen || (Quickshell.screens.length ? Quickshell.screens[0] : null))
+
+  // Auto-detect the focused monitor (where the user is working) via hyprctl and
+  // remember its name; resolveScreen() maps it to a Quickshell screen above.
+  on_ActiveScreenNameChanged: root.resolveScreen()
+  Component.onCompleted: screenProbe.running = true
+
+  Process {
+    id: screenProbe
+    running: false
+    command: ["sh", "-c", "hyprctl -j monitors 2>/dev/null || echo '[]'"]
+    stdout: StdioCollector { onDataChanged: screenProbe._raw = text }
+    property string _raw: ""
+    onExited: function(code) {
+      try {
+        var arr = JSON.parse(screenProbe._raw)
+        for (var i = 0; i < arr.length; i++) {
+          if (arr[i].focused) { root._activeScreenName = arr[i].name; return }
+        }
+      } catch (e) {}
+    }
+  }
+
   visible: open || card.opacity > 0 || popoutSwitching
   color: "transparent"
   exclusionMode: ExclusionMode.Ignore
@@ -171,6 +212,7 @@ PanelWindow {
   onOpenChanged: {
     if (open) {
       focusPrimed = false
+      screenProbe.running = true
       beginFocusPrime()
       if (focusTarget) Qt.callLater(function() {
         if (root.open && root.focusTarget) root.focusTarget.forceActiveFocus()
