@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import qs.Commons
@@ -216,7 +217,7 @@ Panel {
         { n:"Enter", s:"Enter", c:28, type:"enter", w:1.8 }
       ],
       [
-        { n:"Shift", s:"Shift", c:42, type:"shift", w:1.6 },
+        { n:"Ctrl", s:"Ctrl", c:29, type:"ctrl", w:1.6 },
         { n:"<", s:">", c:86, type:"char" },
         { n:"z", s:"Z", c:44, type:"char" },
         { n:"x", s:"X", c:45, type:"char" },
@@ -393,36 +394,40 @@ Panel {
           }
         }
 
-        Repeater {
-          model: root.rows
-          delegate: Row {
-            spacing: root.keyGap
-            Repeater {
-              model: modelData
-              delegate:               QuillKey {
-                key: modelData
-                shift: root.shiftOn
-                active: (modelData.type === "shift" && root.shiftOn)
-                  || (modelData.type === "ctrl" && root.ctrlOn)
-                  || (modelData.type === "alt" && root.altOn)
-                error: root.injectError
-                surface: root.keySurface
-                surfaceHover: root.keySurfaceHover
-                surfacePressed: root.keySurfacePressed
-                surfaceError: root.keySurfaceError
-                boardWidth: root.kbNaturalWidth - root.pad * 2
-                dragTarget: panel.dragHandle
-                borderColor: root.keyBorder
-                contentColor: root.keyContent
-                contentColorDim: root.keyContentDim
-                keyRadius: Style.space(8)
-                keyFont: Style.font.family
-                keyFontSize: Style.font.body
-                onPressed: root.pressKey(modelData)
+          Repeater {
+            model: root.rows
+            delegate: RowLayout {
+              width: parent.width
+              spacing: root.keyGap
+              Repeater {
+                model: modelData
+                delegate: QuillKey {
+                  key: modelData
+                  shift: root.shiftOn
+                  active: (modelData.type === "shift" && root.shiftOn)
+                    || (modelData.type === "ctrl" && root.ctrlOn)
+                    || (modelData.type === "alt" && root.altOn)
+                  error: root.injectError
+                  surface: root.keySurface
+                  surfaceHover: root.keySurfaceHover
+                  surfacePressed: root.keySurfacePressed
+                  surfaceError: root.keySurfaceError
+                  dragTarget: panel.dragHandle
+                  borderColor: root.keyBorder
+                  contentColor: root.keyContent
+                  contentColorDim: root.keyContentDim
+                  keyRadius: Style.space(8)
+                  keyFont: Style.font.family
+                  keyFontSize: Style.font.body
+                  Layout.preferredWidth: root.keyBase * (key.type === "char" ? 1 : (key.w || 1))
+                  Layout.preferredHeight: root.keyH
+                  Layout.fillWidth: key.type !== "char"
+                  Layout.fillHeight: false
+                  onPressed: root.pressKey(modelData)
+                }
               }
             }
           }
-        }
 
         Text {
           width: parent.width
